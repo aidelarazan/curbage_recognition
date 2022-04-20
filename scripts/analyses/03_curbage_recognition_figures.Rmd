@@ -1,0 +1,346 @@
+---
+title: "03 curbage_recognition Figures"
+output: html_notebook
+---
+
+### Angelique I. Delarazan
+#### 04/19/2022
+Generates figures for the curbage paper:
+
+1. Swamplots of two-way ANOVAs on target recognition and lure (2 x 2 ANOVA: Domain Type [Narrarive v. Perceptual] x Age [Older v. Younger])
+
+2. Swamplots of two-way ANOVAs on target recognition and lure (2 x 2 ANOVA: Domain Type [Narrarive v. Perceptual] x Age [Older v. Younger]) after split on MoCA among older adult sample
+
+3. Legend
+
+Export figures as 800 x 800 or larger.
+
+Note: Data cleaning completed using Python (see jupyter notebook: 01_curbage_recognition_data_cleaning.ipynb) and analyses conducted using R (see 02_curbage_recognition_analyses.Rmd)
+
+### Set Up
+```{r}
+#Import Libraries
+library(tidyverse)
+library(ggplot2)
+library(ggsignif)
+library(ggpubr)
+library(dplyr)
+library(ggbeeswarm)
+```
+
+```{r}
+recognition = read_csv("/Volumes/GAMMA/curbage_recognition/data/sub-all_group-all_task-recognition_desc-all_results_neuropsych.csv")
+recognition$subject = as.numeric(recognition$subject)
+recognition$group = as.factor(recognition$group)
+recognition$type = as.factor(recognition$type)
+recognition$LDI = as.numeric(recognition$LDI)
+recognition$group_type = as.factor(recognition$group_type)
+recognition$dprime = as.numeric(recognition$dprime)
+```
+
+### Figure 2a. Swarmplot of dprime for all subjects.
+```{r fig.width = 6}
+#dprime
+
+#dprime_all = 
+  recognition %>% 
+  ggplot(aes(x = type, group = group, y = dprime, col = group)) +
+  ylab("Target Recognition (d')
+       ") + xlab("Test Domain") + labs(title = "") + 
+  coord_cartesian(ylim = c(0.8, 5.5)) +
+  geom_beeswarm(dodge.width = 1, size = 5, alpha = 0.7) +
+  stat_summary(fun = mean, na.rm = TRUE, 
+               geom = "point",
+               size = 3, color = "black", 
+               position = position_dodge(width = 1)) +
+  stat_summary(fun.data = mean_cl_normal, na.rm = TRUE, 
+               geom = "errorbar", width = 0.2, color = "black",
+               position = position_dodge(width = 1),
+               size = 1) +
+  scale_color_manual("group",values = c("older"="#da7b5e","younger"="#5d747c"), labels = c("older"="Older","younger"="Younger")) +
+  theme(legend.position = "none", 
+        plot.title = element_text(size = 48),   
+        axis.text.y = element_text(size = 32), 
+        axis.text.x = element_text(size = 32),
+        axis.title = element_text(size = 32),
+        legend.text=element_text(size=24),
+        legend.title = element_blank())+ 
+  scale_x_discrete(labels=c("narrative"="Narrative", "perceptual"="Perceptual"))  +
+  geom_signif(y_position = c(4.5,5.1), 
+            xmin = c(0.8,1.3), xmax = c(1.7,2.2),
+            size = 1,
+            annotation = c("*","**"), tip_length = 0, textsize = 12, color = "black") +
+  scale_y_continuous(breaks=c(1.0,2.0,3.0,4.0,5.0), labels = scales::number_format(accuracy = 0.1))
+```
+
+### Figure 2b. Swarmplot of LDI for all subjects.
+```{r fig.width = 6}
+#LDI
+
+#LDI_all = 
+  recognition %>% 
+  group_by(subject) %>% 
+  ggplot(aes(x = type, group = group, y = LDI, col = group)) +
+  ylab("Lure Discrimination (LDI)
+       ") + xlab("Test Domain") + labs(title = "") + 
+  coord_cartesian(ylim = c(0, 1.2)) +
+  geom_beeswarm(dodge.width = 1, size = 5, alpha = 0.7) +
+  stat_summary(fun = mean, na.rm = TRUE, 
+               geom = "point",
+               size = 3, color = "black", 
+               position = position_dodge(width = 1)) +
+  stat_summary(fun.data = mean_se, na.rm = TRUE, 
+               geom = "errorbar", width = 0.2, color = "black",
+               position = position_dodge(width = 1),
+               size = 1) +
+  scale_color_manual("group",values = c("older"="#da7b5e","younger"="#5d747c"), labels = c("older"="Older","younger"="Younger")) +
+  geom_signif(y_position = c(1.1, 1), 
+            xmin = c(0.8,1.8), xmax = c(1.7,2.2),
+            size = 1,
+            annotation = c("+","**"), tip_length = 0, textsize = 12, color = "black") +
+  theme(legend.position = "none", 
+        plot.title = element_text(size = 48),   
+        axis.text.y = element_text(size = 32), 
+        axis.text.x = element_text(size = 32),
+        axis.title = element_text(size = 32),
+        legend.text=element_text(size=24),
+        legend.title = element_blank())+ 
+  scale_x_discrete(labels=c("narrative"="Narrative", "perceptual"="Perceptual"))  +
+  scale_y_continuous(breaks=c(0.0,0.5,1.0))
+```
+
+
+### Split on MOCA
+MoCA scores range from 0-30, and a score of 26 or higher is generally considered as “normal.” Given that our older adult sample exhibited heterogeneity in falling above or below a MoCA score of 26, we incorporated a simple contrast of cognitive ability in our analyses via split based on MoCA score. Older participants were categorized in two groups: Lower MoCA Scores (MoCA score < 26) and Higher MoCA Scores (MoCA score >= 26).
+
+#### Subset dataframe to low and high MoCA scorers
+```{r}
+younger = filter(recognition, group=="younger")
+older_low_MoCA = filter(recognition, MoCA_total<26)
+older_high_MoCA = filter(recognition, MoCA_total>25)
+low_MoCA = rbind(younger, older_low_MoCA)
+high_MoCA = rbind(younger, older_high_MoCA)
+```
+
+### Figure 3a. Swarmplot of d' for low MoCA scorers.
+```{r fig.width = 6}
+
+dprime_low = 
+  low_MoCA %>% 
+  ggplot(aes(x = type, group = group, y = dprime, col = group)) +
+  ylab("Target Recognition (d')
+       ") + xlab("Test Domain") + labs(title = "", subtitle = expression("Younger vs. Older"[italic("(Low MoCA Scorer)")])) + 
+  coord_cartesian(ylim = c(0.8, 5.5)) +
+  geom_beeswarm(dodge.width = 1, size = 5, alpha = 0.7) +
+  stat_summary(fun = mean, na.rm = TRUE, 
+               geom = "point",
+               size = 3, color = "black", 
+               position = position_dodge(width = 1)) +
+  stat_summary(fun.data = mean_se, na.rm = TRUE, 
+               geom = "errorbar", width = 0.2, color = "black",
+               position = position_dodge(width = 1),
+               size = 1) +
+  scale_color_manual("group",values = c("older"="#da7b5e","younger"="#5d747c"), labels = c("older"="Older","younger"="Younger")) +
+  geom_signif(y_position = c(5.1), 
+            xmin = c(1.3), xmax = c(2.2),
+            size = 1,
+            annotation = c("***"), tip_length = 0, textsize = 12, color = "black") +
+  theme(legend.position = "none", 
+        plot.title = element_text(size = 48),   
+        axis.text.y = element_text(size = 32), 
+        axis.text.x = element_text(size = 32),
+        axis.title = element_text(size = 32),
+        legend.text=element_text(size=24),
+        legend.title = element_blank(), 
+        plot.subtitle = element_text(hjust=0.5, size = 30, color = 'grey28'),
+        )+
+  scale_x_discrete(labels=c("narrative"="Narrative", "perceptual"="Perceptual"))  +
+  scale_y_continuous(breaks=c(1.0,2.0,3.0,4.0,5.0), labels = scales::number_format(accuracy = 0.1))
+
+dprime_low
+```
+### Figure 3b. Swarmplot of d' for high MoCA scorers.
+```{r fig.width = 6}
+
+dprime_high = 
+  high_MoCA%>% 
+  ggplot(aes(x = type, group = group, y = dprime, col = group))  +
+  ylab("Target Recognition (d')
+       ") + xlab("Test Domain") + labs(title = "", subtitle = expression("Younger vs. Older"[italic("(High MoCA Scorer)")])) + 
+  coord_cartesian(ylim = c(0.8, 5.5)) +
+  geom_beeswarm(dodge.width = 1, size = 5, alpha = 0.7) +
+  stat_summary(fun = mean, na.rm = TRUE, 
+               geom = "point",
+               size = 3, color = "black", 
+               position = position_dodge(width = 1)) +
+  stat_summary(fun.data = mean_se, na.rm = TRUE, 
+               geom = "errorbar", width = 0.2, color = "black",
+               position = position_dodge(width = 1),
+               size = 1) +
+  scale_color_manual("group",values = c("older"="#da7b5e","younger"="#5d747c"), labels = c("older"="Older","younger"="Younger")) +
+  geom_signif(y_position = c(4.5,5.1), 
+            xmin = c(0.8,1.3), xmax = c(1.7,2.2),
+            size = 1,
+            annotation = c("***","***"), tip_length = 0, textsize = 12, color = "black") +
+  theme(legend.position = "none", 
+        plot.title = element_text(size = 48),   
+        axis.text.y = element_text(size = 32), 
+        axis.text.x = element_text(size = 32),
+        axis.title = element_text(size = 32),
+        legend.text=element_text(size=24),
+        legend.title = element_blank(), 
+        plot.subtitle = element_text(hjust=0.5, size = 30, color = 'grey28'),
+        )+
+  scale_x_discrete(labels=c("narrative"="Narrative", "perceptual"="Perceptual"))  +
+  scale_y_continuous(breaks=c(1.0,2.0,3.0,4.0, 5.0), labels = scales::number_format(accuracy = 0.1))
+
+dprime_high
+```
+
+### Figure 3c. Swarmplot of LDI for low MoCA scorers.
+```{r fig.width = 6}
+
+LDI_low = 
+  low_MoCA %>% 
+  ggplot(aes(x = type, group = group, y = LDI, col = group))  +
+  ylab("Lure Discrimination (LDI)
+       ") + xlab("Test Domain") + labs(title = "", subtitle = expression("Younger vs. Older"[italic("(Low MoCA Scorer)")])) + 
+  coord_cartesian(ylim = c(0, 1.2)) +
+  geom_beeswarm(dodge.width = 1, size = 5, alpha = 0.7) +
+  stat_summary(fun = mean, na.rm = TRUE, 
+               geom = "point",
+               size = 3, color = "black", 
+               position = position_dodge(width = 1)) +
+  stat_summary(fun.data = mean_se, na.rm = TRUE, 
+               geom = "errorbar", width = 0.2, color = "black",
+               position = position_dodge(width = 1),
+               size = 1) +
+  scale_color_manual("group",values = c("older"="#da7b5e","younger"="#5d747c"), labels = c("older"="Older","younger"="Younger")) +
+  geom_signif(y_position = c(1.1, 1), 
+            xmin = c(0.8,1.8), xmax = c(1.7,2.2),
+            size = 1,
+            annotation = c("*","**"), tip_length = 0, textsize = 12, color = "black") +
+  theme(legend.position = "none", 
+        plot.title = element_text(size = 48),   
+        axis.text.y = element_text(size = 32), 
+        axis.text.x = element_text(size = 32),
+        axis.title = element_text(size = 32),
+        legend.text=element_text(size=24),
+        legend.title = element_blank(), 
+        plot.subtitle = element_text(hjust=0.5, size = 28, color = 'grey28'),
+        )+
+  scale_x_discrete(labels=c("narrative"="Narrative", "perceptual"="Perceptual"))  +
+  scale_y_continuous(breaks=c(0.0,0.5,1.0))
+
+LDI_low
+```
+
+### Figure 3d. Swarmplot of LDI for low MoCA scorers.
+```{r fig.width = 6}
+
+LDI_high = 
+  high_MoCA %>% 
+  ggplot(aes(x = type, group = group, y = LDI, col = group))   +
+  ylab("Lure Discrimination (LDI)
+       ") + xlab("Test Domain") + labs(title = "", subtitle = expression("Younger vs. Older"[italic("(High MoCA Scorer)")])) + 
+  coord_cartesian(ylim = c(0, 1.2)) +
+  geom_beeswarm(dodge.width = 1, size = 5, alpha = 0.7) +
+  stat_summary(fun = mean, na.rm = TRUE, 
+               geom = "point",
+               size = 3, color = "black", 
+               position = position_dodge(width = 1)) +
+  stat_summary(fun.data = mean_se, na.rm = TRUE, 
+               geom = "errorbar", width = 0.2, color = "black",
+               position = position_dodge(width = 1),
+               size = 1) +
+  scale_color_manual("group",values = c("older"="#da7b5e","younger"="#5d747c"), labels = c("older"="Older","younger"="Younger")) +
+  theme(legend.position = "none", 
+        plot.title = element_text(size = 48),   
+        axis.text.y = element_text(size = 32), 
+        axis.text.x = element_text(size = 32),
+        axis.title = element_text(size = 32),
+        legend.text=element_text(size=24),
+        legend.title = element_blank(), 
+        plot.subtitle = element_text(hjust=0.5, size = 28, color = 'grey28'),
+        )+
+  scale_x_discrete(labels=c("narrative"="Narrative", "perceptual"="Perceptual")) +
+  scale_y_continuous(breaks=c(0.0,0.5,1.0))
+
+LDI_high
+```
+
+### Generate Legend.
+Note: Change + theme(legend.position = " ",... to "right" or "top" to make the legend long or wide format, respectively.
+```{r fig.width = 2}
+legend = recognition %>% 
+  ggplot(aes(x = type, group = group, y = LDI, col = group)) +
+  ylab("") + xlab("") + labs(title = "", subtitle = "Younger vs. High MoCA Score Older") + 
+  coord_cartesian(ylim = c(0, 1.10)) +
+  geom_beeswarm(dodge.width = 1, size = 5, alpha = 0.8) +
+  stat_summary(fun = mean, na.rm = TRUE, 
+               geom = "point",
+               size = 3, color = "black", 
+               position = position_dodge(width = 1)) +
+  stat_summary(fun.data = mean_se, na.rm = TRUE, 
+               geom = "errorbar", width = 0.2, color = "black",
+               position = position_dodge(width = 1),
+               size = 1) +
+  scale_color_manual("group",values = c("older"="#da7b5e","younger"="#5d747c"), labels = c("older"="Older   ","younger"="Younger")) +
+  theme(legend.position = "top", 
+        plot.title = element_text(size = 48),   
+        axis.text.y = element_text(size = 32), 
+        axis.text.x = element_text(size = 32),
+        axis.title = element_text(size = 32),
+        legend.text=element_text(size=24),
+        legend.title = element_blank(),
+        plot.subtitle = element_text(hjust=0.5, size = 28, color = 'grey28')
+        )+
+  scale_x_discrete(labels=c("narrative"="Narrative", "perceptual"="Perceptual")) 
+  scale_x_discrete(labels=c("narrative"="Narrative", "perceptual"="Perceptual"))
+
+as_ggplot(get_legend(legend))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

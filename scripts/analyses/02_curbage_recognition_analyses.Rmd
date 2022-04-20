@@ -1,0 +1,233 @@
+---
+title: "02 curbage_recognition Analyses"
+output: html_notebook
+---
+### Angelique I. Delarazan
+#### 04/19/2022
+
+1. Performs two-way ANOVAs on target recognition and lure (2 x 2 ANOVA: Domain Type [Narrarive v. Perceptual] x Age [Older v. Younger])
+
+2. Calculates correlations between neuropsychological tests and target recognition & lure performance
+
+3. Split on MoCA: Incorporate a test of cognitive abilities in Analysis #1 above
+
+Note: Data cleaning required (see jupyter notebook: 01_curbage_recognition_data_cleaning.ipynb)
+
+### Set Up
+```{r}
+#Import Libraries
+library(tidyverse)
+library(dplyr)
+library(rstatix)
+library(emmeans)
+library(afex)
+```
+
+```{r}
+recognition = read_csv("/Volumes/GAMMA/curbage_recognition/data/sub-all_group-all_task-recognition_desc-all_results_neuropsych.csv")
+recognition$subject = as.numeric(recognition$subject)
+recognition$group = as.factor(recognition$group)
+recognition$type = as.factor(recognition$type)
+recognition$LDI = as.numeric(recognition$LDI)
+recognition$group_type = as.factor(recognition$group_type)
+recognition$dprime = as.numeric(recognition$dprime)
+```
+
+### Analyses
+#### Figure 2a. Perform two-way ANOVA on Target Recognition (d')
+Target recognition was assessed in terms of normalized d' values (z[Target Hit Rate] – z[Foil False Alarm Rate]) derived from signal detection analysis.
+
+2 x 2 ANOVA: Domain Type (Perceptual v. Narrative) x Age (Younger v. Older Adults)
+```{r}
+#excluded participant: recognition[(recognition$subject!=307),]
+stats_aov = aov_ez(id="subject",dv="dprime",data=recognition,between="group",within="type", fun_aggregate = mean)
+stats_aov
+stats_posthoc = emmeans(stats_aov,~group*type,contr = "pairwise", adjust = "bonferroni")
+stats_posthoc
+```
+
+#### Figure 2b. Perform two-way ANOVA on Lure Discrimination (LDI)
+Response bias was corrected by calculating a lure discrimination index (LDI) for each subject (p[New|Lure] – p[New|Target])
+
+2 x 2 ANOVA: Domain Type (Perceptual v. Narrative) x Age (Younger v. Older Adults)
+```{r}
+stats_aov = aov_ez(id="subject",dv="LDI",data=recognition,between="group",within="type", fun_aggregate = mean)
+stats_aov
+stats_posthoc = emmeans(stats_aov,~group*type,contr = "pairwise", adjust = "bonferroni")
+stats_posthoc
+```
+
+#### Table 1. Raw response proportion responses.
+Note: Change domain_type and/or age_group below.
+```{r}
+domain_type = "narrative"
+age_group = "older"
+
+# mean(SD) Target Hit Rate
+mean(recognition[(recognition$group==age_group)&(recognition$type==domain_type),]$target_hit_rate, na.rm=TRUE)
+sd(recognition[(recognition$group==age_group)&(recognition$type==domain_type),]$target_hit_rate, na.rm=TRUE)
+
+# mean(SD) Lure Correct Rejection Rate
+mean(recognition[(recognition$group==age_group)&(recognition$type==domain_type),]$lure_cr_rate, na.rm=TRUE)
+sd(recognition[(recognition$group==age_group)&(recognition$type==domain_type),]$lure_cr_rate, na.rm=TRUE)
+
+# mean(SD) Foil Correct Rejection Rate
+mean(recognition[(recognition$group==age_group)&(recognition$type==domain_type),]$foil_cr_rate, na.rm=TRUE)
+sd(recognition[(recognition$group==age_group)&(recognition$type==domain_type),]$foil_cr_rate, na.rm=TRUE)
+```
+
+### Table 2. Correlations with Neuropsycholgical Tests. 
+Note: Change neuropsych (e.g., MoCA_total, Craft21_immediate_total, 
+Craft21_delayed_total, MINT_total) and/or domain_type (e.g., "narrative" or "perceptual").
+```{r}
+neuropsych = recognition$MoCA_total
+domain_type = "narrative"
+
+# mean(SD) of neuropsych score
+mean(neuropsych, na.rm = TRUE)
+sd(neuropsych, na.rm = TRUE)
+
+# correlations (pearson's) between neuropsych and dprime or LDI subset by domain type.
+cor.test(formula = ~ recognition$dprime + neuropsych, subset = recognition$type == domain_type)
+cor.test(formula = ~ recognition$LDI + neuropsych, subset = recognition$type == domain_type)
+```
+
+### Split on MOCA
+MoCA scores range from 0-30, and a score of 26 or higher is generally considered as “normal.” Given that our older adult sample exhibited heterogeneity in falling above or below a MoCA score of 26, we incorporated a simple contrast of cognitive ability in our analyses via split based on MoCA score. Older participants were categorized in two groups: Lower MoCA Scores (MoCA score < 26) and Higher MoCA Scores (MoCA score >= 26).
+
+#### Subset dataframe to low and high MoCA scorers
+```{r}
+younger = filter(recognition, group=="younger")
+older_low_MoCA = filter(recognition, MoCA_total<26)
+older_high_MoCA = filter(recognition, MoCA_total>25)
+low_MoCA = rbind(younger, older_low_MoCA)
+high_MoCA = rbind(younger, older_high_MoCA)
+```
+
+#### Table 2. Raw correct response proportions (Low & High MoCA Scorers).
+Low MoCA Scorers
+```{r}
+domain_type = "narrative"
+age_group = "older"
+
+# mean(SD) Target Hit Rate
+mean(older_low_MoCA[(older_low_MoCA$type==domain_type),]$target_hit_rate, na.rm=TRUE)
+sd(older_low_MoCA[(older_low_MoCA$type==domain_type),]$target_hit_rate, na.rm=TRUE)
+
+# mean(SD) Lure Correct Rejection
+mean(older_low_MoCA[(older_low_MoCA$type==domain_type),]$lure_cr_rate, na.rm=TRUE)
+sd(older_low_MoCA[(older_low_MoCA$type==domain_type),]$lure_cr_rate, na.rm=TRUE)
+
+# mean(SD) Foil Correct Rejection
+mean(older_low_MoCA[(older_low_MoCA$type==domain_type),]$foil_cr_rate, na.rm=TRUE)
+sd(older_low_MoCA[(older_low_MoCA$type==domain_type),]$foil_cr_rate, na.rm=TRUE)
+```
+
+High MoCA Scorers
+```{r}
+domain_type = "narrative"
+age_group = "older"
+
+# mean(SD) Target Hit Rate
+mean(older_high_MoCA[(older_high_MoCA$type==domain_type),]$target_hit_rate, na.rm=TRUE)
+sd(older_high_MoCA[(older_high_MoCA$type==domain_type),]$target_hit_rate, na.rm=TRUE)
+
+# mean(SD) Lure Correct Rejection
+mean(older_high_MoCA[(older_high_MoCA$type==domain_type),]$lure_cr_rate, na.rm=TRUE)
+sd(older_high_MoCA[(older_high_MoCA$type==domain_type),]$lure_cr_rate, na.rm=TRUE)
+
+# mean(SD) Foil Correct Rejection
+mean(older_high_MoCA[(older_high_MoCA$type==domain_type),]$foil_cr_rate, na.rm=TRUE)
+sd(older_high_MoCA[(older_high_MoCA$type==domain_type),]$foil_cr_rate, na.rm=TRUE)
+```
+
+### Low MoCA Scorers
+#### Perform two-way ANOVA on Target Recognition (d') on Low MoCA scorers
+Target recognition was assessed in terms of normalized d' values (z[Target Hit Rate] – z[Foil False Alarm Rate]) derived from signal detection analysis.
+
+Figure 3a. 2 x 2 ANOVA: Domain Type (Perceptual v. Narrative) x Age (Younger v. Older Adults)
+```{r}
+stats_aov = aov_ez(id="subject",dv="dprime",data=low_MoCA,between="group",within="type", fun_aggregate = mean)
+stats_aov
+stats_posthoc = emmeans(stats_aov,~group*type,contr = "pairwise", adjust = "bonferroni")
+stats_posthoc
+```
+
+#### Perform two-way ANOVA on Lure Discrimination (LDI) on Low MoCA scorers
+Response bias was corrected by calculating a lure discrimination index (LDI) for each subject (p[New|Lure] – p[New|Target])
+
+Figure 3c. 2 x 2 ANOVA: Domain Type (Perceptual v. Narrative) x Age (Younger v. Older Adults)
+```{r}
+stats_aov = aov_ez(id="subject",dv="LDI",data=low_MoCA,between="group",within="type", fun_aggregate = mean)
+stats_aov
+stats_posthoc = emmeans(stats_aov,~group*type,contr = "pairwise", adjust = "bonferroni")
+stats_posthoc
+```
+
+### High MoCA Scorers
+#### Perform two-way ANOVA on Target Recognition (d') on High MoCA scorers
+Target recognition was assessed in terms of normalized d' values (z[Target Hit Rate] – z[Foil False Alarm Rate]) derived from signal detection analysis.
+
+Figure 3b. 2 x 2 ANOVA: Domain Type (Perceptual v. Narrative) x Age (Younger v. Older Adults)
+```{r}
+stats_aov = aov_ez(id="subject",dv="dprime",data=high_MoCA,between="group",within="type", fun_aggregate = mean)
+stats_aov
+stats_posthoc = emmeans(stats_aov,~group*type,contr = "pairwise", adjust = "bonferroni")
+stats_posthoc
+```
+
+#### Perform two-way ANOVA on Lure Discrimination (LDI) on High MoCA scorers
+Response bias was corrected by calculating a lure discrimination index (LDI) for each subject (p[New|Lure] – p[New|Target])
+
+Figure 3d. 2 x 2 ANOVA: Domain Type (Perceptual v. Narrative) x Age (Younger v. Older Adults)
+```{r}
+stats_aov = aov_ez(id="subject",dv="LDI",data=high_MoCA,between="group",within="type", fun_aggregate = mean)
+stats_aov
+stats_posthoc = emmeans(stats_aov,~group*type,contr = "pairwise", adjust = "bonferroni")
+stats_posthoc
+```
+
+#### Run 03_curbage_recognition_figures.Rmd to generate figures.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
