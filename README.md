@@ -15,6 +15,7 @@ Retrieval: Participants completed two recognition tasks based on narrative or pe
 
 ## Folder Structure
  * [data](./data/)
+ * [docs](./docs/)
  * [scripts](./scripts/)
     * [analyses](./scripts/analyses/)
     * [experiment](./scripts/experiment/)
