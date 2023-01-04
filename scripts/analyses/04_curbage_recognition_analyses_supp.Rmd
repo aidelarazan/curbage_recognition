@@ -1,0 +1,177 @@
+---
+title: "04 curbage_recognition Analyses: Supplemental Materials"
+output: html_notebook
+---
+
+### Angelique I. Delarazan
+#### 04/19/2022
+
+### Set Up
+```{r}
+#Import Libraries
+library(tidyverse)
+library(dplyr)
+library(rstatix)
+library(emmeans)
+library(afex)
+```
+
+```{r}
+recognition = read_csv("/Volumes/GAMMA/curbage_recognition/reviews/analyses/data/sub-all_group-all_task-recognition_desc-all_results_neuropsych.csv")
+recognition$subject = as.numeric(recognition$subject)
+recognition$group = as.factor(recognition$group)
+recognition$type = as.factor(recognition$type)
+recognition$LDI = as.numeric(recognition$LDI_reviewer)
+recognition$group_type = as.factor(recognition$group_type)
+recognition$dprime = as.numeric(recognition$dprime)
+```
+```{r}
+recall = read_csv("/Volumes/GAMMA/curbage_behavioral/experiment1/data/recall/sub-all_task-recall_desc-scored.csv")
+
+recall$subject = as.numeric(recall$SUBID)
+recall$scene = as.factor(recall$Scene)
+recall$narrative01 = as.numeric(recall$NarrativeVerifiableDetails_JD)
+recall$narrative02 = as.numeric(recall$NarrativeVerifibleDetails_EM)
+recall$perceptual01 = as.numeric(recall$PerceptualVerifiableDetails_JD)
+recall$perceptual02 = as.numeric(recall$PerceptualVerifiableDetails_EM)
+
+recall = subset(recall, select = c("subject", "scene", "narrative01", "narrative02", "perceptual01", "perceptual02"))
+```
+
+```{r}
+recall = recall %>% 
+  mutate(group = if_else(
+    subject < 300, "older",
+    if_else(
+      subject > 300, "younger",
+      "blah"
+    )
+  ))
+```
+```{r}
+recall = recall[(recall$subject != 999),] %>% 
+  group_by(subject, group, scene) %>% 
+  summarise(recall_narrative = ((narrative01 + narrative02)/2),
+            recall_perceptual = ((perceptual01 + perceptual02)/2)) %>% 
+  group_by(subject, group) %>% 
+  summarise(total_narrative = sum(recall_narrative), total_perceptual = sum(recall_perceptual))
+```
+```{r}
+all = merge(recall, recognition, by = c("subject", "group"))
+```
+
+### Recall
+Supplementary Table 2. Total Verifiable Details in Recall
+```{r}
+recall %>% 
+  group_by(group) %>% 
+  summarise(mean_narrative = mean(total_narrative),
+            sd_narrative = sd(total_narrative),
+            mean_perceptual = mean(total_perceptual),
+            sd_perceptual = sd(total_perceptual))
+```
+
+```{r}
+t.test(recall$total_narrative ~ recall$group, paired = FALSE, var.equal = FALSE)
+```
+
+
+### Supplemental Table 3. Neuropsychological test scores for older adults, and correlations between these scores and recognition performance on Narrative and Perceptual test domain.
+```{r}
+cor.test(all[(all$group_type=="older_narrative"),]$MoCA_total, all[(all$group_type=="older_narrative"),]$dprime)
+cor.test(all[(all$group_type=="older_perceptual"),]$Craft21_immediate_total, all[(all$group_type=="older_perceptual"),]$dprime)
+cor.test(all[(all$group_type=="older_narrative"),]$Craft21_delayed_total, all[(all$group_type=="older_narrative"),]$dprime)
+cor.test(all[(all$group_type=="older_perceptual"),]$MINT_total, all[(all$group_type=="older_perceptual"),]$dprime)
+```
+```{r}
+cor.test(all[(all$group_type=="older_narrative"),]$MoCA_total, all[(all$group_type=="older_narrative"),]$LDI)
+cor.test(all[(all$group_type=="older_perceptual"),]$Craft21_immediate_total, all[(all$group_type=="older_perceptual"),]$LDI)
+cor.test(all[(all$group_type=="older_narrative"),]$Craft21_delayed_total, all[(all$group_type=="older_narrative"),]$LDI)
+cor.test(all[(all$group_type=="older_perceptual"),]$MINT_total, all[(all$group_type=="older_perceptual"),]$LDI)
+```
+
+### Split on MoCA
+#### Subset dataframe to low and high MoCA scorers
+```{r}
+younger = filter(all, group=="younger")
+older_low_MoCA = filter(all, MoCA_total<26)
+older_high_MoCA = filter(all, MoCA_total>25)
+low_MoCA = rbind(younger, older_low_MoCA)
+high_MoCA = rbind(younger, older_high_MoCA)
+```
+
+#### Table 2. Raw correct response proportions (Low & High MoCA Scorers).
+Low MoCA Scorers
+```{r}
+domain_type = "narrative"
+
+# mean(SD) Target Hit Rate
+mean(older_low_MoCA[(older_low_MoCA$type==domain_type),]$target_hit_rate, na.rm=TRUE)
+sd(older_low_MoCA[(older_low_MoCA$type==domain_type),]$target_hit_rate, na.rm=TRUE)
+
+# mean(SD) Lure Correct Rejection
+mean(older_low_MoCA[(older_low_MoCA$type==domain_type),]$lure_cr_rate, na.rm=TRUE)
+sd(older_low_MoCA[(older_low_MoCA$type==domain_type),]$lure_cr_rate, na.rm=TRUE)
+
+# mean(SD) Foil Correct Rejection
+mean(older_low_MoCA[(older_low_MoCA$type==domain_type),]$foil_cr_rate, na.rm=TRUE)
+sd(older_low_MoCA[(older_low_MoCA$type==domain_type),]$foil_cr_rate, na.rm=TRUE)
+```
+
+High MoCA Scorers
+```{r}
+domain_type = "narrative"
+
+# mean(SD) Target Hit Rate
+mean(older_high_MoCA[(older_high_MoCA$type==domain_type),]$target_hit_rate, na.rm=TRUE)
+sd(older_high_MoCA[(older_high_MoCA$type==domain_type),]$target_hit_rate, na.rm=TRUE)
+
+# mean(SD) Lure Correct Rejection
+mean(older_high_MoCA[(older_high_MoCA$type==domain_type),]$lure_cr_rate, na.rm=TRUE)
+sd(older_high_MoCA[(older_high_MoCA$type==domain_type),]$lure_cr_rate, na.rm=TRUE)
+
+# mean(SD) Foil Correct Rejection
+mean(older_high_MoCA[(older_high_MoCA$type==domain_type),]$foil_cr_rate, na.rm=TRUE)
+sd(older_high_MoCA[(older_high_MoCA$type==domain_type),]$foil_cr_rate, na.rm=TRUE)
+```
+### Categorize as low, high MoCA older and younger
+```{r}
+all_older = all[(all$subject<300),] %>% 
+  mutate(MoCA_condition = if_else(MoCA_total<26, "1_low_MoCA",
+         if_else(MoCA_total>25, "2_high_MoCA",
+         "wtf")))
+```
+
+```{r}
+all_younger = filter(all, group=="younger")
+all_younger$MoCA_condition = "3_younger"
+```
+
+```{r}
+recognition_MoCA = rbind(all_older, all_younger)
+```
+
+Uncomment for Supplemental Figure 2.
+```{r}
+#recognition_MoCA$MoCA_condition = paste0(recognition_MoCA$MoCA_condition, "_", recognition_MoCA$type)
+```
+
+#### Figure 2a. Perform two-way ANOVA on Target Recognition (d')
+Target recognition was assessed in terms of normalized d' values (z[Target Hit Rate] – z[Foil False Alarm Rate]) derived from signal detection analysis.
+
+2 x 3 ANOVA: Domain Type (Perceptual v. Narrative) x Age (Younger v. Older Adults)
+```{r}
+#excluded participant: recognition[(recognition$subject!=307),]
+stats_aov = aov_ez(id="subject",dv="dprime",data=recognition_MoCA[(recognition_MoCA$subject!=307),],between="MoCA_condition",within="type", fun_aggregate = mean)
+stats_aov
+stats_posthoc = emmeans(stats_aov,~MoCA_condition*type,contr = "pairwise", adjust = "bonferroni")
+stats_posthoc
+```
+
+```{r}
+#excluded participant: recognition[(recognition$subject!=307),]
+stats_aov = aov_ez(id="subject",dv="LDI",data=recognition_MoCA[(recognition_MoCA$subject!=307),],between="MoCA_condition",within="type", fun_aggregate = mean)
+stats_aov
+stats_posthoc = emmeans(stats_aov,~MoCA_condition*type,contr = "pairwise", adjust = "bonferroni")
+stats_posthoc
+```

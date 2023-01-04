@@ -1,0 +1,152 @@
+---
+title: "02 curbage_recognition Analyses: Edited"
+output: html_notebook
+---
+### Angelique I. Delarazan
+#### 04/19/2022
+
+1. Performs two-way ANOVAs on target recognition and lure (2 x 2 ANOVA: Domain Type [Narrarive v. Perceptual] x Age [Older v. Younger]). Dependent variables: dprime (z[Target Hit Rate] – z[Foil False Alarm Rate]) and LDI (p[New|Lure] - p[Old|Foil])
+
+2. Performs mixed models on the previous data on Target Recognition (d') and LDI with recall of verifiable details as a random effect.
+
+3. Calculates raw response proportions across age groups (Older vs. Younger) and domain (Narrative vs. Perceptual). 
+
+4. Calculates mean and standard deviation of neuropsychological test scores for older adults.
+
+Note: Data cleaning required (see jupyter notebook: 01_curbage_recognition_data_cleaning.ipynb)
+
+### Set Up
+```{r}
+#Import Libraries
+library(tidyverse)
+library(dplyr)
+library(rstatix)
+library(emmeans)
+library(afex)
+```
+
+```{r}
+recognition = read_csv("/Volumes/GAMMA/curbage_recognition/reviews/analyses/data/sub-all_group-all_task-recognition_desc-all_results_neuropsych.csv")
+recognition$subject = as.numeric(recognition$subject)
+recognition$group = as.factor(recognition$group)
+recognition$type = as.factor(recognition$type)
+recognition$LDI = as.numeric(recognition$LDI_reviewer)
+recognition$group_type = as.factor(recognition$group_type)
+recognition$dprime = as.numeric(recognition$dprime)
+```
+```{r}
+recall = read_csv("/Volumes/GAMMA/curbage_behavioral/experiment1/data/recall/sub-all_task-recall_desc-scored.csv")
+
+recall$subject = as.numeric(recall$SUBID)
+recall$scene = as.factor(recall$Scene)
+recall$narrative01 = as.numeric(recall$NarrativeVerifiableDetails_JD)
+recall$narrative02 = as.numeric(recall$NarrativeVerifibleDetails_EM)
+recall$perceptual01 = as.numeric(recall$PerceptualVerifiableDetails_JD)
+recall$perceptual02 = as.numeric(recall$PerceptualVerifiableDetails_EM)
+
+recall = subset(recall, select = c("subject", "scene", "narrative01", "narrative02", "perceptual01", "perceptual02"))
+```
+
+```{r}
+recall = recall %>% 
+  mutate(group = if_else(
+    subject < 300, "older",
+    if_else(
+      subject > 300, "younger",
+      "blah"
+    )
+  ))
+```
+```{r}
+recall = recall[(recall$subject != 999),] %>% 
+  group_by(subject, group, scene) %>% 
+  summarise(recall_narrative = ((narrative01 + narrative02)/2),
+            recall_perceptual = ((perceptual01 + perceptual02)/2)) %>% 
+  group_by(subject, group) %>% 
+  summarise(total_narrative = sum(recall_narrative), total_perceptual = sum(recall_perceptual))
+```
+```{r}
+all = merge(recall, recognition, by = c("subject", "group"))
+```
+
+### 2 x 2 Mixed ANOVA: (Within: Narrative vs. Perceptual) and (Between: Older vs. Younger)
+
+#### Figure 2a. Perform two-way ANOVA on Target Recognition (d')
+Target recognition was assessed in terms of normalized d' values (z[Target Hit Rate] – z[Foil False Alarm Rate]) derived from signal detection analysis.
+
+2 x 2 ANOVA: Domain Type (Perceptual v. Narrative) x Age (Younger v. Older Adults)
+```{r}
+#excluded participant: recognition[(recognition$subject!=307),]
+stats_aov = aov_ez(id="subject",dv="dprime",data=recognition,between="group",within="type", fun_aggregate = mean)
+stats_aov
+stats_posthoc = emmeans(stats_aov,~group*type,contr = "pairwise", adjust = "bonferroni")
+stats_posthoc
+```
+
+#### Figure 2b. Perform two-way ANOVA on Lure Discrimination (LDI)
+Response bias was corrected by calculating a lure discrimination index (LDI) for each subject (p(New|Lure) - p(Old|Foil))
+
+2 x 2 ANOVA: Domain Type (Perceptual v. Narrative) x Age (Younger v. Older Adults)
+```{r}
+stats_aov = aov_ez(id="subject",dv="LDI",data=recognition,between="group",within="type", fun_aggregate = mean)
+stats_aov
+stats_posthoc = emmeans(stats_aov,~group*type,contr = "pairwise", adjust = "bonferroni")
+stats_posthoc
+```
+
+#### Run mixed models on the previous data on Target Recognition (d') with verifiable details as a random effect.
+Target recognition was assessed in terms of normalized d' values (z[Target Hit Rate] – z[Foil False Alarm Rate]) derived from signal detection analysis.
+```{r}
+stats_test = lmer(dprime ~ type * group + (1|total_narrative), data = all)
+summary(stats_test)
+
+coef(summary(stats_test))
+
+#emmeans(stats_test, pairwise ~ group * type, adjust = "bonferroni")
+```
+#### Run mixed models on the previous data on LDI with MoCA_total as a random effect.
+Response bias was corrected by calculating a lure discrimination index (LDI) for each subject (p(New|Lure) - p(Old|Foil))
+```{r}
+stats_test = lmer(LDI ~ type * group + (1|recall_narrative), data = all)
+summary(stats_test)
+
+coef(summary(stats_test))
+
+emmeans(stats_test, pairwise ~ group * type, adjust = "bonferroni")
+```
+
+### Table 2. Raw response proportions across age groups (Older vs. Younger) and domain (Narrative vs. Perceptual). 
+Note: Change domain_type and/or age_group below.
+```{r}
+domain_type = "narrative"
+age_group = "older"
+
+# mean(SD) Target Hit Rate
+mean(recognition[(recognition$group==age_group)&(recognition$type==domain_type),]$target_hit_rate, na.rm=TRUE)
+sd(recognition[(recognition$group==age_group)&(recognition$type==domain_type),]$target_hit_rate, na.rm=TRUE)
+
+# mean(SD) Lure Correct Rejection Rate
+mean(recognition[(recognition$group==age_group)&(recognition$type==domain_type),]$lure_cr_rate, na.rm=TRUE)
+sd(recognition[(recognition$group==age_group)&(recognition$type==domain_type),]$lure_cr_rate, na.rm=TRUE)
+
+# mean(SD) Foil Correct Rejection Rate
+mean(recognition[(recognition$group==age_group)&(recognition$type==domain_type),]$foil_cr_rate, na.rm=TRUE)
+sd(recognition[(recognition$group==age_group)&(recognition$type==domain_type),]$foil_cr_rate, na.rm=TRUE)
+```
+
+
+### Table 1. Neuropsychological test scores form older adults (N = 21). Scores are presented as mean (SD).
+```{r}
+recognition %>% 
+  group_by(group) %>% 
+  summarise(MoCA_mean = mean(MoCA_total), 
+            MoCA_sd = sd(MoCA_total), 
+            Craft21_immediate_mean = mean(Craft21_immediate_total),
+            Craft21_immediate_sd = sd(Craft21_immediate_total),
+            Craft21_delayed_mean = mean(Craft21_delayed_total),
+            Craft21_delayed_sd = sd(Craft21_delayed_total),
+            MINT_mean = mean(MINT_total),
+            MINT_sd = sd(MINT_total)
+            )
+```
+
