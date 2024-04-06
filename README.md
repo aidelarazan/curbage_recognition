@@ -1,6 +1,8 @@
-# curbage_recognition
+# Aging impacts memory for perceptual, but not narrative, event details
 
 ## Project Description
+[Delarazan, A. I., Ranganath, C., & Reagh, Z. M. (2023). Aging impacts memory for perceptual, but not narrative, event details. Learning & Memory, 30(2), 48-54.](https://learnmem.cshlp.org/content/30/2/48.full.pdf)
+
 [PsyArXiv Preprint](https://psyarxiv.com/j4583/)
 
 Declining memory is a hallmark feature of cognitive aging. Memory, however, is not a unitary system, and instead involves different types of representations that may involve distinct pieces of information. Historically, much of our understanding of age-related memory decline arise from recognition of items that tend to focus on isolated perceptual details. Although there has been an increase in the use of naturalistic stimuli in recent years, these studies often involve unconstrained recall of narratives. This raises the question: when remembering lifelike experiences, do older adults show differential vulnerability in remembering perceptual versus narrative information? Here, we designed a task to tax mnemonic discrimination of information regarding narrative and perceptual domains. Repository includes: experiment code, data, and analyses notebooks.
@@ -22,4 +24,4 @@ Retrieval: Participants completed two recognition tasks based on narrative or pe
  * [README.md](./README.md)
 
 ## Contact
-Angelique I. Delarazan  | a.delarazan@wustl.edu 
+Angelique I. Delarazan | a.delarazan@wustl.edu 
